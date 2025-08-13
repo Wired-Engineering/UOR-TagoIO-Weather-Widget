@@ -345,6 +345,7 @@ const WeatherDashboard = () => {
                     <XAxis dataKey="time" stroke="#666" />
                     <YAxis 
                       stroke="#666"
+                      domain={[0, 100]}
                       label={{ 
                         value: '%',
                         angle: -90, 
