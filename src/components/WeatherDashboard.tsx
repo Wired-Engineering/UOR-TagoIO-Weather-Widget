@@ -65,8 +65,9 @@ const WeatherDashboard = () => {
     const dayGroups: { [key: string]: EntityWeatherData[] } = {}
     
     data.forEach(item => {
-      // Use forecast_date from metadata if available, otherwise fall back to UTC date
-      const dateKey = item.forecast_date || new Date(item.forecast_time).toISOString().split('T')[0]
+      // Use local date from forecast_time to group by local days
+      const localDate = new Date(item.forecast_time)
+      const dateKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`
       
       if (!dayGroups[dateKey]) {
         dayGroups[dateKey] = []
@@ -81,7 +82,9 @@ const WeatherDashboard = () => {
       const windSpeeds = hourlyData.map(d => d.wind_speed_ten_m || 0)
       const windDirections = hourlyData.map(d => d.wind_direction_ten_m || 0)
 
-      const date = new Date(dateKey)
+      // Parse date components to create proper local date
+      const [year, month, day] = dateKey.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
 
       return {
@@ -215,15 +218,25 @@ const WeatherDashboard = () => {
         <div className="week-forecast-card">
           <h2 className="section-title">7-Day Forecast</h2>
           <div className="week-forecast-grid">
-            {dayForecasts.map((day: DayForecast, index: number) => (
+            {dayForecasts.map((day: DayForecast, index: number) => {
+              // Check if this day is actually today
+              const today = new Date()
+              const todayDateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+              const isToday = day.date === todayDateKey
+              
+              // Parse date components to create proper local date for display
+              const [year, month, dayNum] = day.date.split('-').map(Number)
+              const displayDate = new Date(year, month - 1, dayNum)
+              
+              return (
               <div 
                 key={day.date}
                 className={`day-card ${selectedDay?.date === day.date ? 'selected' : ''}`}
                 onClick={() => setSelectedDay(day)}
               >
                 <div className="day-card-header">
-                  <span className="day-name">{index === 0 ? 'Today' : day.dayName}</span>
-                  <span className="day-date">{new Date(day.date).toLocaleDateString('en-US', { 
+                  <span className="day-name">{isToday ? 'Today' : day.dayName}</span>
+                  <span className="day-date">{displayDate.toLocaleDateString('en-US', { 
                     month: 'numeric', 
                     day: 'numeric', 
                     year: '2-digit' 
@@ -243,7 +256,7 @@ const WeatherDashboard = () => {
                   <span className="rain-chance">{Math.round(day.avgPrecipitationProb)}%</span>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
 
@@ -290,7 +303,11 @@ const WeatherDashboard = () => {
 
             <div className="chart-container">
               <h3 className="chart-title">
-                {selectedDay.dayName} - {new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                {(() => {
+                  const [year, month, day] = selectedDay.date.split('-').map(Number)
+                  const displayDate = new Date(year, month - 1, day)
+                  return `${selectedDay.dayName} - ${displayDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+                })()}
               </h3>
               
               <ResponsiveContainer width="100%" height={300}>
